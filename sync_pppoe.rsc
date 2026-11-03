@@ -50,7 +50,7 @@
     :local p3 [:find $line "|" ($p2 + 1)]
 
     # Validate line format
-    :if (($p1 = "") || ($p2 = "") || ($p3 = "")) do={
+    :if (($p1 = nil) || ($p2 = nil) || ($p3 = nil)) do={
         :log warning ("Malformed line skipped: " . $line)
         :continue
     }
@@ -126,7 +126,13 @@
     }
 }
 
-# Disable users removed from sheet
+# Fail closed: never disable accounts when the feed contains no valid usernames.
+:if ([:len $activeUsers] = 0) do={
+    :log error "PPP sync aborted: no valid usernames in feed; no removals or disables performed"
+    :error "PPP sync aborted: empty or invalid feed"
+}
+
+# Disable users removed from sheet (never delete accounts)
 :foreach sid in=[/ppp secret find where comment=$tag] do={
 
     :local uname [/ppp secret get $sid name]
@@ -146,8 +152,7 @@
         :if (!$currentDisabled) do={
 
             /ppp secret set $sid disabled=yes
-            /ppp secret remove $sid
-            :log warning ("PPP DISABLED: " . $uname)
+            :log warning ("PPP DISABLED (not deleted): " . $uname)
 
         } else={
 
