@@ -1,0 +1,26 @@
+# root/.github/workflows/apps-script-ci.yml
+name: Apps Script Syntax
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Parse Google Apps Script files as JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          while IFS= read -r -d '' script; do
+            temp=$(mktemp --suffix=.js)
+            cp "$script" "$temp"
+            node --check "$temp"
+            rm -f "$temp"
+            count=$((count + 1))
+          done < <(find . -type f -name '*.gs' -print0)
+          echo "Validated $count Apps Script files."
